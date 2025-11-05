@@ -1,36 +1,27 @@
-def get_debt_over_limit(connection, limit: int) -> list:
+import pandas as pd
+
+def get_debt_over_limit(df: pd.DataFrame, limit: int) -> pd.DataFrame:
     """
-    connection: SQL connection from connecte_remote_db()
+    table: user table 
 
     Limit: the debt limit requested
 
-    returns: list [tuples(email, firstname, lastname, debt)]
+    returns: dataframe of bad people
     """
-    table_name='Users'
-    column_name='debt'
+    return df[df['debt'] > limit].reset_index()
 
-    cursor = connection.cursor()
-    query = f"SELECT * FROM {table_name} WHERE {column_name} > %s;"
-    cursor.execute(query, (limit,))
-    rows = cursor.fetchall()
-    ret = rows[:][1:4]
-    return ret
 
-def get_total_debt(connection)-> tuple:
+def get_total_debt(df: pd.DataFrame)-> tuple:
     """
     Calculates total debt.
 
+    df: users table as datafram
+
     returns: tuple (owed to streckbase, owed from streckbase, total)
     """
-    cursor = connection.cursor()
-    query = f"SELECT * FROM Users WHERE debt > %s;"
-    cursor.execute(query, (0,))
-    rows = cursor.fetchall()
-    pos_debt = sum(list(zip(*rows))[4])
-    query = f"SELECT * FROM Users WHERE debt < %s;"
-    cursor.execute(query, (0,))
-    rows = cursor.fetchall()
-    neg_debt = sum(list(zip(*rows))[4])
+    pos_debt = df[df["debt"] > 0]["debt"].sum()
+    neg_debt = df[df["debt"] < 0]["debt"].sum()
 
     return pos_debt, -neg_debt, pos_debt+neg_debt
+
 

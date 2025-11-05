@@ -1,20 +1,26 @@
 import os
 from dotenv import load_dotenv
 load_dotenv('streckbase\.env')
-import resend
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 
-resend.api_key = os.getenv('RESEND_API')
+def send_email(recipient, subject, body):
+    EMAIL_ADDRESS = os.getenv('EMAIL_ADRESS')
+    EMAIL_PASSWORD = os.getenv('EMAIL_PASSWORD') 
+    msg = MIMEMultipart()
+    msg['From'] = EMAIL_ADDRESS
+    msg['To'] = recipient
+    msg['Subject'] = subject
+    msg.attach(MIMEText(body, 'html'))
+    try:
+        with smtplib.SMTP("smtp.gmail.com", 587) as server:
+            server.starttls()  # Secure the connection
+            server.login(EMAIL_ADDRESS, EMAIL_PASSWORD)
+            server.send_message(msg)
+    except Exception as e:
+        print("Error sending email:", e)
 
-def send_email(recipient: str, subject: str, html: str):
-    resend.Emails.send({
-    "from": os.getenv('RESEND_AUTHOR'),
-    "replyTo": os.getenv('RESEND_REPLY'),
-    "to": recipient,
-    "subject": subject,
-    "html": html
-    })
-
-def send_mass_email(recipients: str, subject:str, html_template:str, personal_infos):
+def send_mass_email(recipients: str, subject:str, html_template:str, personal_infos, other_info):
     for recipient, personal_info in zip(recipients, personal_infos):
-        html = html_template.format(*personal_info)
-        send_email(recipient, subject, html)
+        send_email(recipient, subject, html_template.format(*personal_info, *other_info))

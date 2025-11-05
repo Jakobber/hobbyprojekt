@@ -1,62 +1,79 @@
-import mysql.connector
-import os
-from dotenv import load_dotenv
-from mysql.connector import Error
+# import mysql.connector
+# import os
+# from dotenv import load_dotenv
+# from mysql.connector import Error
 
-load_dotenv('streckbase\.env')
+# load_dotenv('streckbase\.env')
+
+import os
+from sqlalchemy import create_engine, text
+from sqlalchemy.exc import SQLAlchemyError
+from dotenv import load_dotenv
 
 def connect_remote_db():
+    """Create and return an SQLAlchemy engine connection.
+    
+    returns tuple (connection engine)
+    """
+    load_dotenv()
+    DB_URL = (
+    f"mysql+mysqlconnector://{os.getenv('DB_USER')}:{os.getenv('DB_PASS')}"
+    f"@{os.getenv('DB_HOST')}:{os.getenv('DB_PORT')}/{os.getenv('DB_NAME')}"
+)
+
     try:
-        connection = mysql.connector.connect(
-        host=os.getenv('DB_HOST'),
-        port=os.getenv('DB_PORT'),
-        user=os.getenv('DB_USER'),
-        password=os.getenv('DB_PASS'),
-        database=os.getenv('DB_NAME')
-    )
+        engine = create_engine(DB_URL)
+        connection = engine.connect()
+        # print("Successfully connected to remote database")
 
-        if connection.is_connected():
-            print("Successfully connected to remote database")
-            cursor = connection.cursor()
-            cursor.execute("SELECT NOW();")
-            print("Current time from DB:", cursor.fetchone())
+        # Test query
+        result = connection.execute(text("SELECT NOW();"))
+        # print("Current time from DB:", result.scalar())
 
-    except Error as e:
+        return connection, engine
+    except SQLAlchemyError as e:
         print("Error:", e)
+        return None
 
-    return connection
 
-def disconnet(connection):
-    if connection.is_connected():
-        cursor = connection.cursor()
-        cursor.close()
+def disconnect(connection):
+    """Close the database connection."""
+    if connection:
         connection.close()
         print("Connection closed")
 
+
 def fetch_tables(connection):
-    if connection.is_connected():
-        cursor = connection.cursor()
+    """Fetch and print all tables in the database."""
+    try:
+        result = connection.execute(text("SHOW TABLES;"))
+        tables = [row[0] for row in result]
 
-        # Get all table names
-        cursor.execute("SHOW TABLES;")
-        tables = cursor.fetchall()
-
-        
         print("Tables in database:")
         for table in tables:
-            print(" -", table[0])
-            print_table(connection, table[0])
-        
+            print(" -", table)
+            print_table(connection, table)
+
+    except SQLAlchemyError as e:
+        print("Error fetching tables:", e)
+
 
 def print_table(connection, table_name, nRows=0):
-    cursor = connection.cursor()
-    cursor.execute(f'SELECT * from {table_name}')
-    columns = [desc[0] for desc in cursor.description]
-    print("Columns:", columns)
+    """Print rows and columns from a given table."""
+    try:
+        result = connection.execute(text(f"SELECT * FROM {table_name};"))
+        columns = result.keys()
+        rows = result.fetchall()
 
-    rows = cursor.fetchall()
-    if nRows or nRows:
-        print("Rows:")
-        for row in rows[:nRows]:
-            print(row)
+        print(f"\nTable: {table_name}")
+        print("Columns:", columns)
 
+        # If nRows is 0, print all rows
+        nRows = len(rows) if nRows == -1 else nRows
+        if nRows > 0:
+            print(f"Rows (showing {nRows}):")
+            for row in rows[:nRows]:
+                print(row)
+
+    except SQLAlchemyError as e:
+        print(f"Error printing table '{table_name}':", e)
