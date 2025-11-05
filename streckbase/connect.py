@@ -16,13 +16,13 @@ def connect_remote_db():
     )
 
         if connection.is_connected():
-            print("✅ Successfully connected to remote database")
+            print("Successfully connected to remote database")
             cursor = connection.cursor()
             cursor.execute("SELECT NOW();")
-            print("🕒 Current time from DB:", cursor.fetchone())
+            print("Current time from DB:", cursor.fetchone())
 
     except Error as e:
-        print("❌ Error:", e)
+        print("Error:", e)
 
     return connection
 
@@ -31,7 +31,7 @@ def disconnet(connection):
         cursor = connection.cursor()
         cursor.close()
         connection.close()
-        print("🔌 Connection closed")
+        print("Connection closed")
 
 def fetch_tables(connection):
     if connection.is_connected():
@@ -42,7 +42,7 @@ def fetch_tables(connection):
         tables = cursor.fetchall()
 
         
-        print("📋 Tables in database:")
+        print("Tables in database:")
         for table in tables:
             print(" -", table[0])
             print_table(connection, table[0])
@@ -52,13 +52,11 @@ def print_table(connection, table_name, nRows=0):
     cursor = connection.cursor()
     cursor.execute(f'SELECT * from {table_name}')
     columns = [desc[0] for desc in cursor.description]
-    print("🧾 Columns:", columns)
+    print("Columns:", columns)
 
     rows = cursor.fetchall()
     if nRows or nRows:
-        print("📄 Rows:")
+        print("Rows:")
         for row in rows[:nRows]:
             print(row)
 
-def get_IDs(connection):
-    pass

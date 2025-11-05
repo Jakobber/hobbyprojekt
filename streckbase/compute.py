@@ -20,7 +20,7 @@ def get_total_debt(connection)-> tuple:
     """
     Calculates total debt.
 
-    returns: tuple (debt to streckbase, debt from streckbase, total)
+    returns: tuple (owed to streckbase, owed from streckbase, total)
     """
     cursor = connection.cursor()
     query = f"SELECT * FROM Users WHERE debt > %s;"
