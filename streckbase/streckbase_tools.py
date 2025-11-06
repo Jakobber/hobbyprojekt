@@ -6,7 +6,8 @@ def main():
         terminal_wrapper.automail()
     elif op == 2:
         terminal_wrapper.check_balance()
-    
+    elif op == 3:
+        terminal_wrapper.get_transaction_since()
 
 if __name__ =="__main__":
     main()

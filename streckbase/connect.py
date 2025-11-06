@@ -51,7 +51,6 @@ def fetch_tables(connection):
 
         print("Tables in database:")
         for table in tables:
-            print(" -", table)
             print_table(connection, table)
 
     except SQLAlchemyError as e:

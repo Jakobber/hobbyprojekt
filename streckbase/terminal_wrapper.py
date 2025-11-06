@@ -3,6 +3,7 @@ import compute
 import automail 
 import fetch 
 from html_templates import skuldmail
+from datetime import datetime
 
 def start() -> int:
     print(  r"   _____ __                 __   __                       __              __    ")
@@ -11,7 +12,9 @@ def start() -> int:
     print(  r" ___/ / /_/ /  /  __/ /__/ ,< / /_/ / /_/ (__  )  __/  / /_/ /_/ / /_/ / (__  ) ")
     print(  r"/____/\__/_/   \___/\___/_/|_/_.___/\__,_/____/\___/   \__/\____/\____/_/____/  ")
     print(  r"                                                                                ")
-    print('1. Automail över specifik skuld \n2. Hur mår streckbase?')
+    print('1. Automail över specifik skuld')
+    print('2. Hur mår streckbase?')
+    print('3. Transactioner för specifik person')
     return int(input(""))
 
 def automail():
@@ -40,8 +43,45 @@ def check_balance():
     _, eng = connect.connect_remote_db()
     df = fetch.get_table_as_pandas(eng, 'Users')
     pos, neg, all = compute.get_total_debt(df)
-    print(f'Folk är skyldiga Streckbase {pos}kr\nStreckbase är skyldiga folk {neg}kr\nTotalt har streckbase därav {all}kr skyldig till sig.')
+    print(f'Folk är skyldiga Streckbase {pos}kr\nStreckbase är skyldig folk {neg}kr\nTotalt ligger streckbase därav {all}kr.')
     
 
-def get_full_transaction():
-    pass
+def get_transaction_since():
+    end = False
+    _, eng = connect.connect_remote_db()
+    print('Laddar in data', end='\r')
+    dfPur = fetch.get_table_as_pandas(eng, 'Purchases')
+    dfUser = fetch.get_table_as_pandas(eng, 'Users')
+    dfItems = fetch.get_table_as_pandas(eng, 'Items')
+    while not end:
+        user_id = str(input("Personnummer (tio siffror):"))
+        name = fetch.get_name_from_userID(dfUser, user_id)
+        if name:
+            print(name)
+            end = True
+        else:
+            print('Kunde inte hitta användare')
+
+    end = False
+    while not end:
+        since = str(input("Sedan datum alternativt antal rader (ex 2025-11-06 alternativt 80):\n"))
+        try:
+            since = int(since)
+            df = fetch.get_personal_last_nRows(dfPur, user_id, since)
+            end = True
+        except ValueError:
+            pass
+        try:
+            _ = datetime.strptime(since, "%Y-%m-%d")
+            df = fetch.get_last_since_date(dfPur, user_id, since)
+            end = True
+        except ValueError:
+            pass
+        if not end:
+            print('Varken ett datum eller heltal')
+
+    df = fetch.merge_purchases_items(df, dfItems)
+    print('Datum             | Namn                | Alcohol   | Volym')
+    for _, row in df.iterrows():
+        print(f"{str(row['date'])[:16]:16} | {row['name'][:20]:20} | {row['alcohol']:10} | {row['volume']:5}")
+    
