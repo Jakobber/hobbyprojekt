@@ -25,8 +25,6 @@ dependencies:
 >
 >dotenv
 >
->resend
->
 >sqlalchemy
 
 WIP

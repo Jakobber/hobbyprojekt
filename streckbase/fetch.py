@@ -22,29 +22,50 @@ def print_names_from_table(table: pd.DataFrame):
     for i, row in table.iterrows():
         print(f"{i:2}: {row['firstname']:9} {row['lastname']:12} är skyldig {row['debt']:4}kr, den råttan!")
 
-def remove_names_from_table(df):
+def remove_names_from_table(df: pd.DataFrame) -> pd.DataFrame:
+    """Shows a list of persons in table, loops over a remove function"""
     end = False
-    remove = []
     while not end:
-        answer = input("Vilket nummer har personen? Ett nummer i taget, avsluta med \'e\'")
-        if answer != 'e':
-            remove.append(int(answer))
-        else:
-            end = True
+        answer = input("Vilka/vilket nummer har personerna/personen? Kommaseparera nummeren")
+    try:
+        remove = [int(x) for x in answer.split(",")]
+        end = True
+    except:
+        print("Listan var inte kommaseparerad")
     return df.drop(remove)
 
 def get_personal_last_nRows(df:pd.DataFrame, user_id:str, nRows:int) -> pd.DataFrame:
     return df[df['user_id'] == user_id].tail(nRows)
 
-def get_last_since_date(df:pd.DataFrame, user_id:str, date:str) -> pd.DataFrame:
-    return df[(df['user_id'] == user_id) & (df['date'] >= pd.Timestamp(date, tz='UTC'))]
+def get_last_since_date(df:pd.DataFrame, date:str, user_id='') -> pd.DataFrame:
+    """
+    slices df since a timestamp
     
-def merge_purchases_items(dfPurchases:pd.DataFrame, dfItems:pd.DataFrame) -> pd.Series:
-    return pd.merge(dfPurchases, dfItems, on='item_id', how='inner')
+    pass user Id as string to user_id to also single out one user
 
-def get_name_from_userID(dfUsers: pd.DataFrame, ID: str) -> str:
+    Returns: pd.DataFrame since date
+    """
+    if user_id == '':
+        return df[df['date'] >= pd.Timestamp(date, tz='UTC')].sort_values(by='date').reset_index()
+    else:
+        return df[(df['user_id'] == user_id) & (df['date'] >= pd.Timestamp(date, tz='UTC'))].sort_values(by='date').reset_index()
+    
+def merge_purchases_items(dfPurchases:pd.DataFrame, dfItems:pd.DataFrame) -> pd.DataFrame:
+    # Merge dfs on item_id, sort new df by the date column, reset index since we want the df sorted by date
+    df = pd.merge(dfPurchases, dfItems, on='item_id', how='inner').sort_values(by='date').reset_index()
+    df[['volume', 'alcohol']] = df[['volume', 'alcohol']].fillna(0.0) # remove NaN values in volume and alcohol columns
+    return df
+
+def get_name_from_userID(dfUsers: pd.DataFrame, ID: str) -> tuple[str, str]:
+    """
+    get string for first and lastname of user ID
+
+    returns: Tuple of Strings, first and lastname OR False if user is not in database
+    """
     user = dfUsers[dfUsers['user_id'] == ID]
     if len(user) == 1:
-        return f"{user['firstname'].iloc[0]} {user['lastname'].iloc[0]}"
+        return user['firstname'].iloc[0], user['lastname'].iloc[0]
     else: 
-        return False
+        return False, False
+    
+    

@@ -3,11 +3,13 @@ import terminal_wrapper
 def main():
     op = terminal_wrapper.start()
     if op == 1:
-        terminal_wrapper.automail()
+        terminal_wrapper.automail_skuld()
     elif op == 2:
         terminal_wrapper.check_balance()
     elif op == 3:
         terminal_wrapper.get_transaction_since()
+    elif op == 4:
+        terminal_wrapper.automail_wrapped()
 
 if __name__ =="__main__":
     main()

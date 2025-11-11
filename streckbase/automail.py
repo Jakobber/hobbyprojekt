@@ -1,11 +1,11 @@
 import os
 from dotenv import load_dotenv
-load_dotenv('streckbase\.env')
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
-def send_email(recipient, subject, body):
+def send_email(recipient: str, subject:str, body:str):
+    load_dotenv('streckbase\.env')
     EMAIL_ADDRESS = os.getenv('EMAIL_ADRESS')
     EMAIL_PASSWORD = os.getenv('EMAIL_PASSWORD') 
     msg = MIMEMultipart()
@@ -21,6 +21,13 @@ def send_email(recipient, subject, body):
     except Exception as e:
         print("Error sending email:", e)
 
-def send_mass_email(recipients: str, subject:str, html_template:str, personal_infos, other_info):
+def send_mass_email(recipients: str, subject:str, html_template:str, personal_infos: list[tuple], constant_info: list[tuple]):
+    """
+    Loops over 'recipient' and 'personal infos' and sends personalized emails to all adresses in 'recipient'
+    
+    Unpacks 'personal_infos' followed by 'constant_info' into the html code
+
+    Make sure there are the same number of substitutions in the html code as in 'personal_infos' and 'constant_info' combined
+    """
     for recipient, personal_info in zip(recipients, personal_infos):
-        send_email(recipient, subject, html_template.format(*personal_info, *other_info))
+        send_email(recipient, subject, html_template.format(*personal_info, *constant_info))

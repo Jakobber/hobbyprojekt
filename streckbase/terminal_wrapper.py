@@ -2,6 +2,8 @@ import connect
 import compute 
 import automail 
 import fetch 
+import pandas as pd
+import numpy as np
 from html_templates import skuldmail
 from datetime import datetime
 
@@ -15,9 +17,10 @@ def start() -> int:
     print('1. Automail över specifik skuld')
     print('2. Hur mår streckbase?')
     print('3. Transactioner för specifik person')
+    print('4. Streckbase wrapped')
     return int(input(""))
 
-def automail():
+def automail_skuld():
     _, eng = connect.connect_remote_db()
     df = fetch.get_table_as_pandas(eng, 'Users')
     limit = int(input("Vilken skuldgräns vill du automaila alla över?\n"))
@@ -27,7 +30,6 @@ def automail():
         fetch.print_names_from_table(bad_people)
         print(f"Dessa personer är totalt skyldiga {bad_people['debt'].sum()}kr")
         if str(input("Vill du ta bort någon person? y/n\n")).lower() == 'y':
-            print('Det va generöst')
             bad_people = fetch.remove_names_from_table(bad_people)
         else: break
     
@@ -45,22 +47,21 @@ def check_balance():
     pos, neg, all = compute.get_total_debt(df)
     print(f'Folk är skyldiga Streckbase {pos}kr\nStreckbase är skyldig folk {neg}kr\nTotalt ligger streckbase därav {all}kr.')
     
-
 def get_transaction_since():
     end = False
     _, eng = connect.connect_remote_db()
-    print('Laddar in data', end='\r')
+    print('Laddar in data', end='\r                                                \r')
     dfPur = fetch.get_table_as_pandas(eng, 'Purchases')
     dfUser = fetch.get_table_as_pandas(eng, 'Users')
     dfItems = fetch.get_table_as_pandas(eng, 'Items')
     while not end:
         user_id = str(input("Personnummer (tio siffror):"))
-        name = fetch.get_name_from_userID(dfUser, user_id)
-        if name:
-            print(name)
+        fName, lName = fetch.get_name_from_userID(dfUser, user_id)
+        if fName:
+            print(f'{fName} {lName}')
             end = True
         else:
-            print('Kunde inte hitta användare')
+            print('Kunde inte hitta användare, testa igen')
 
     end = False
     while not end:
@@ -73,7 +74,7 @@ def get_transaction_since():
             pass
         try:
             _ = datetime.strptime(since, "%Y-%m-%d")
-            df = fetch.get_last_since_date(dfPur, user_id, since)
+            df = fetch.get_last_since_date(dfPur, since, user_id)
             end = True
         except ValueError:
             pass
@@ -85,3 +86,33 @@ def get_transaction_since():
     for _, row in df.iterrows():
         print(f"{str(row['date'])[:16]:16} | {row['name'][:20]:20} | {row['alcohol']:10} | {row['volume']:5}")
     
+def automail_wrapped():
+    """
+    skickar automail innehållande statistik till alla medlemmar på streckbase sedan specifikt datum
+
+    """
+    _, eng = connect.connect_remote_db() # Connect to streckbase SQL
+    print('Laddar in data', end='\r                                                \r')
+    dfPur = fetch.get_table_as_pandas(eng, 'Purchases') #Load tables as pandas
+    dfUser = fetch.get_table_as_pandas(eng, 'Users')
+    dfItems = fetch.get_table_as_pandas(eng, 'Items')
+    
+    input_since = input("Sedan datum (Ex 2025-01-01):") 
+    dfPur = fetch.get_last_since_date(dfPur, input_since) #Remove lines before date
+    dfInfo = fetch.merge_purchases_items(dfPur, dfItems) #Merge tables to talbe containing all info needed
+    df_wrapped = compute.create_streckbase_wrapped_df(dfInfo)
+    df_wrapped = pd.merge(dfUser['user_id', 'firstname', 'lastname'], df_wrapped, on='user_id')
+    while True:
+        lobare = input("Skicka till alla eller endast sittande? a/s: ").strip().lower()
+        if lobare == 's':
+            df_wrapped = df_wrapped[df_wrapped['lobare'] == 1]
+            print("Skickar till endast lobare")
+            break
+        elif lobare == 'a':
+            print("Skickar till alla")
+            break
+        else:
+            print("Felaktigt svar, försök igen!")
+    df_wrapped = df_wrapped.drop(labels='lobare')
+
+
